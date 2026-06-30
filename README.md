@@ -1,97 +1,64 @@
-# ClaudeCode — Online Catalog API
+# ClaudeCode — A Claude Code Capability Showcase
 
-A spec-driven, **.NET 8 Clean Architecture** reference project: a production-grade REST API for an online catalog, built end-to-end using **Claude Code**. This repository doubles as a worked example of the full spec-driven workflow — organizational guidance, a structured brief, a technical spec, and the resulting generated codebase — used in the Technology Reboot Agentic AI / Claude Code training.
+This repository exists to demonstrate **Claude Code's spec-driven, multi-persona development workflow** in practice — not just to ship an API. The generated code (`src/OnlineCatalog.*`) is the *output*; the real subject of this repo is the **process artifacts** that produced it: a reusable organizational governance file, a fully fleshed-out product brief, and a complete technical specification, all authored as part of a single Claude Code engagement.
 
-## What's in This Repo
+If you're here to see what disciplined, governed agentic coding looks like end-to-end — request → governance → brief → approval → spec → implementation → tests — start with the three markdown files below.
 
-This repo contains two things side by side:
+## The Three Documents That Drove This Build
 
-1. **The spec-driven workflow artifacts** (`OnlineCatalogApi/`) — the original scaffold project plus the documents that drove its build: an organizational guidance file defining a 7-persona development process, a product brief, and a full technical specification.
-2. **The generated solution** (`src/`, `tests/`) — the actual Clean Architecture .NET 8 API produced by following that spec: `OnlineCatalog.Api`, `OnlineCatalog.Application`, `OnlineCatalog.Domain`, `OnlineCatalog.Infrastructure`, and a unit test project.
+### 1. `OnlineCatalogApi/CLAUDE-ORG-GUIDANCE.md` — the governance layer
 
-## The Online Catalog API
+A portable, project-agnostic template (designed to be copied into any new project and referenced from its `CLAUDE.md`) that defines **how Claude Code is allowed to work**, independent of what it's building. Highlights:
 
-A secure REST API that lets authenticated clients browse catalog items organized by category, and lets users maintain a personal wishlist.
+- **Seven personas, always in order** — Product Owner → Business Analyst → Architect → UX Designer → Technical Lead → Developer → Tester. No persona is ever skipped, regardless of task size, including one-line fixes and config edits.
+- **The brief is a hard gate, not a formality.** Before any file is touched, three conditions must all be true: the brief exists on disk at a defined path, the user has explicitly approved it (silence or a related question is not approval), and a properly named branch has been checked out.
+- **A fixed brief structure** every feature must follow — Product Owner, Business Analyst, Architect, UX Designer, Technical Lead, Trade-offs, Open Questions, Test Data, Tester, Approval — so every persona's reasoning is captured in one place and traceable later.
+- **A Tester persona with two distinct jobs**: pre-implementation, it audits whether the brief's states are actually testable and what seed data is missing (a brief that can't be tested is incomplete); post-implementation, it validates the build against the Business Analyst's acceptance criteria and routes failures back to the right persona — a logic bug to the Developer, a design flaw to the Architect, a missing requirement to the BA.
+- **A Gitflow branching model** (`main` / `develop` / `feature/` / `fix/` / `hotfix/` / `docs/` / `chore/`) with an explicit rule: never commit directly to `main` or `develop`.
+- **Opt-in multi-agent parallelization** — Developer and Tester work can fan out across isolated git worktrees for independent units of work, but only when proposed in the brief and explicitly approved by the user; the planning personas (Product Owner through Technical Lead) always run as a single coherent voice and are never fragmented across agents.
 
-**Core features**
-- API-key-secured endpoints — no request reaches the API without a valid key
-- User management (CRUD)
-- Category management (CRUD)
-- Catalog browsing with pagination, category filtering, and search
-- Per-user wishlist (add / list / remove), filterable by category
+This is the file that turns Claude Code from "writes code on request" into something closer to a governed engineering process with checks, approvals, and accountability built in.
 
-### Architecture
+### 2. `OnlineCatalogApi/docs/briefs/online-catalog-api.md` — the brief in action
 
-Clean Architecture with strict inward-pointing dependencies:
+A complete, filled-out implementation brief for the Online Catalog API, following the exact structure mandated by the governance file. It captures the full reasoning chain for a real feature:
+
+- **Product Owner** — goal, why it matters, an explicit success definition (five API surfaces operational, no unauthenticated request reaches any endpoint, EF Core migrations applied automatically, Swagger documented, structured logging with `traceId`), and clear scope boundaries (no UI, no OAuth, no email service).
+- **Business Analyst** — five user stories, eleven edge-case/business-rule entries cross-referenced to spec requirement IDs (e.g. `FR-USER-02`, `NFR-SEC-03`), and thirteen concrete, testable acceptance criteria.
+- **Architect** — the chosen solution structure (`OnlineCatalogApi` → `OnlineCatalog.Api` plus three new class libraries), a full layer-responsibility table, NuGet dependencies per layer, the API-key authentication design, the EF Core data model decisions, the caching and rate-limiting approach, **and a documented "Alternatives Considered" table** (Redis vs. in-memory cache, JWT vs. API key, minimal APIs vs. controllers — each with a stated reason it was ruled out), plus explicit risks.
+- **UX Designer** — even for a pure REST API, this persona reasons about API ergonomics: a consistent error envelope, empty-list states returning `200` rather than `404`, and server-side pagination guards.
+- **Technical Lead** — an inward-to-outward implementation sequence (Domain → Application → Infrastructure → API → migrations → tests), a ten-item Definition of Done checklist, and an explicit call that parallelization is *not* recommended here because each layer depends on the previous one.
+- **Trade-offs** — four explicit, named trade-offs (e.g. scaffolded tests now vs. 80% coverage later) with the reasoning for each decision kept visible rather than buried.
+- **Open Questions** — unresolved items tracked with an owner and status rather than silently assumed away.
+- **Test Data** — the seed states required to exercise every code path (valid/expired/revoked API keys, a second user for cross-user authorization tests, etc.), an 11-item manual test checklist, and a minimum validation path for when the full stack isn't available.
+- **Approval** — a status field, left as "Pending user approval" in this snapshot, showing the gate the governance file requires before implementation can begin.
+
+### 3. `OnlineCatalogApi/SPEC.MD` — the technical specification
+
+The detailed technical spec the brief and implementation were built against: full functional requirements (`FR-AUTH`, `FR-USER`, `FR-CAT`, `FR-CATALOG`, `FR-WISH`, `FR-ERR`) and non-functional requirements (`NFR-PERF`, `NFR-SEC`, `NFR-REL`, `NFR-MAIN`) as ID'd, testable tables; complete request/response JSON schemas for every endpoint; the common error envelope contract; and full data model definitions (columns, types, constraints, and the entity-relationship summary) for every table. Every requirement in this document maps directly to a MediatR command/query, a controller endpoint, or a domain rule — by design, so Claude Code (or any engineer) can trace from spec line to implementation file.
+
+## What Got Built From This Process
+
+Following the brief and spec, Claude Code produced a working **.NET 8 Clean Architecture** REST API under `src/`:
 
 ```
 OnlineCatalog.sln
 ├── src/
-│   ├── OnlineCatalog.Api/             # Controllers, middleware, Program.cs — thin, delegates to MediatR
-│   ├── OnlineCatalog.Application/     # CQRS commands/queries, handlers, validators, DTOs, mappings
-│   ├── OnlineCatalog.Domain/          # Entities, exceptions, repository interfaces — pure C#, zero dependencies
-│   └── OnlineCatalog.Infrastructure/  # EF Core, repositories, API key auth, services
+│   ├── OnlineCatalog.Api/             # Thin controllers, middleware, Program.cs
+│   ├── OnlineCatalog.Application/     # MediatR commands/queries, FluentValidation, AutoMapper, DTOs
+│   ├── OnlineCatalog.Domain/          # Entities, repository interfaces, domain exceptions — pure C#
+│   └── OnlineCatalog.Infrastructure/  # EF Core, repositories, API key auth handler
 └── tests/
     └── OnlineCatalog.UnitTests/       # xUnit + Moq + FluentAssertions
 ```
 
-| Layer | Project | Rule |
-|---|---|---|
-| API | `OnlineCatalog.Api` | Thin controllers only — calls `mediator.Send()`, no business logic |
-| Application | `OnlineCatalog.Application` | CQRS handlers, FluentValidation, AutoMapper — no EF Core references |
-| Domain | `OnlineCatalog.Domain` | Pure C#, zero NuGet dependencies, owns all business rules |
-| Infrastructure | `OnlineCatalog.Infrastructure` | EF Core, repositories, API key authentication, external services |
+**Implemented surfaces:** Users (CRUD), Categories (CRUD with delete-conflict protection), Catalog items (CRUD with pagination, category filtering, and search), and a per-user Wishlist (add / list / remove) — all secured behind a custom `X-Api-Key` authentication handler, rate-limited at 100 requests/minute per key, versioned via `Asp.Versioning`, documented through Swagger, and logged through Serilog.
 
-### Tech Stack
+This is exactly the traceability the spec promised: every controller route, every `409`/`422`/`401` business rule, and every entity in the database maps back to a numbered requirement in `SPEC.MD` and an acceptance criterion in the brief.
 
-| Purpose | Library |
-|---|---|
-| CQRS / Mediator | MediatR |
-| Validation | FluentValidation |
-| Object mapping | AutoMapper |
-| ORM | Entity Framework Core 8 (SQL Server) |
-| Auth | Custom `X-Api-Key` authentication handler |
-| Password hashing | BCrypt.Net |
-| Logging | Serilog (structured, console sink) |
-| API docs | Swashbuckle (Swagger UI) |
-| API versioning | Asp.Versioning |
-| Rate limiting | ASP.NET Core built-in rate limiter (fixed window) |
-| Caching | `Microsoft.Extensions.Caching.Memory` |
-| Testing | xUnit, Moq, FluentAssertions, coverlet |
+> Note: `OnlineCatalogApi/Program.cs` and `OnlineCatalogApi/appsettings.json` are preserved in their original, unmodified state — the default ASP.NET Core Web API scaffold (complete with the template `WeatherForecastController`) that this project started from, before the Clean Architecture solution under `src/` was generated. They're left in place intentionally, as the "before" half of the before/after story this repo tells.
 
-### API Endpoints
-
-All routes are versioned (`/api/v{version}/...`) and require a valid `X-Api-Key` header except `/health`.
-
-| Resource | Method | Route |
-|---|---|---|
-| Users | `POST` | `/api/v1/users` |
-| Users | `GET` | `/api/v1/users/{id}` |
-| Users | `PUT` | `/api/v1/users/{id}` |
-| Users | `DELETE` | `/api/v1/users/{id}` |
-| Categories | `GET` | `/api/v1/categories` |
-| Categories | `GET` | `/api/v1/categories/{id}` |
-| Categories | `POST` | `/api/v1/categories` |
-| Categories | `PUT` | `/api/v1/categories/{id}` |
-| Categories | `DELETE` | `/api/v1/categories/{id}` |
-| Catalog | `GET` | `/api/v1/catalog` (paginated, filterable by `categoryId`) |
-| Catalog | `GET` | `/api/v1/catalog/{id}` |
-| Catalog | `POST` | `/api/v1/catalog` |
-| Catalog | `PUT` | `/api/v1/catalog/{id}` |
-| Catalog | `DELETE` | `/api/v1/catalog/{id}` |
-| Wishlist | `GET` | `/api/v1/wishlist` (filterable by `categoryId`) |
-| Wishlist | `POST` | `/api/v1/wishlist` |
-| Wishlist | `DELETE` | `/api/v1/wishlist/{itemId}` |
-| Health | `GET` | `/health` |
-
-Key business rules: deleting a category with linked catalog items returns `409 Conflict`; creating a catalog item with a non-existent `categoryId` returns `422 Unprocessable Entity`; duplicate wishlist entries return `409 Conflict`; missing/invalid API keys return `401 Unauthorized`; requests exceeding 100/min per key return `429 Too Many Requests`; all errors are returned in a `{ status, message, traceId }` envelope.
-
-## Prerequisites
-
-- .NET 8 SDK
-- SQL Server (LocalDB works out of the box on Windows; update the connection string for other environments)
-
-## Build & Run
+## Build & Run the Generated API
 
 ```bash
 git clone https://github.com/technology-reboot/ClaudeCode.git
@@ -99,46 +66,19 @@ cd ClaudeCode
 
 dotnet restore OnlineCatalog.slnx
 dotnet build OnlineCatalog.slnx
-
 dotnet run --project src/OnlineCatalog.Api
 ```
 
-Database migrations are applied automatically on startup. Once running, Swagger UI is available at `/swagger` in the Development environment, with an `X-Api-Key` security scheme pre-configured for testing authenticated endpoints.
-
-### Configuration
-
-Connection string and other settings live in `src/OnlineCatalog.Api/appsettings.json`:
-
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=OnlineCatalog;Trusted_Connection=True;MultipleActiveResultSets=true"
-  },
-  "Cache": {
-    "DefaultTtlSeconds": 60
-  }
-}
-```
-
-Override `DefaultConnection` to point at your own SQL Server instance, and adjust `appsettings.Development.json` for local overrides.
-
-## Running Tests
+Requires .NET 8 SDK and a reachable SQL Server instance (LocalDB works by default — see `appsettings.json`). Migrations are applied automatically on startup; Swagger UI is available at `/swagger` in Development, with the `X-Api-Key` scheme pre-wired for testing.
 
 ```bash
 dotnet test OnlineCatalog.slnx
 ```
 
-`tests/OnlineCatalog.UnitTests` covers representative handlers across the Catalog, Categories, and Users features using Moq and FluentAssertions.
+## Why This Is Useful as a Reference
 
-## The Spec-Driven Workflow (`OnlineCatalogApi/`)
-
-This folder documents how the `src/OnlineCatalog.*` solution was actually produced, and is useful as a template for similar Claude Code–driven builds:
-
-- **`CLAUDE-ORG-GUIDANCE.md`** — an organizational guidance template defining a 7-persona development process (Product Owner → Business Analyst → Architect → UX Designer → Technical Lead → ...) that every feature, fix, or change runs through in order.
-- **`SPEC.MD`** — the full technical specification: architecture, layer responsibilities, key libraries, and detailed functional requirements (FR-AUTH, FR-USER, FR-CAT, FR-CATALOG, FR-WISH) with explicit HTTP behaviors for each.
-- **`docs/briefs/online-catalog-api.md`** — the product brief: goals, success definition, scope boundaries, user stories, edge cases/business rules, and acceptance criteria that the eventual implementation was validated against.
-- **`Program.cs` / `appsettings.json`** — the original default ASP.NET Core Web API scaffold (still containing the default `WeatherForecastController`) that this project started from before the Clean Architecture solution under `src/` was generated.
+Most "AI wrote this code" demos show only the output. This repo is structured to show the **governance and reasoning that preceded the output** — the kind of artifact trail (brief → approval gate → spec → traceable implementation → tests) that makes agentic coding viable in a real engineering organization rather than just a fast way to generate code. It's used in the Technology Reboot Agentic AI / Claude Code training specifically to walk through that process document-by-document.
 
 ## About
 
-Part of the **Technology Reboot** Agentic AI training series, used to demonstrate Claude Code's spec-driven development workflow — taking a project from organizational guidance and a structured brief through to a fully implemented, tested, production-shaped .NET solution.
+Part of the **Technology Reboot** Agentic AI training series.
